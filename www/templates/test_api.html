@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<title>人员清单</title>
+		<style>
+			* {
+				padding: 0;
+				margin: 0;
+			}
+			
+			#user-list {
+				list-style: none;
+			}
+		</style>
+	</head>
+
+	<body>
+		{{1535912996.7972815|datetime}}
+		{{('卧槽' | stringx)}}
+		{{title}}
+		<ul id="user-list">
+		</ul>
+		
+	</body>
+	<script src="../static/script/jquery-1.9.1.min.js"></script>
+	<script>
+		
+		window.onload = function() {
+			$.ajax({
+				type: "get",
+				url: 'http://127.0.0.1:9100/api/usersall?users=sdfsdf',
+				dataType: "json",
+				jsonp: 'jsoncallback',
+				data: {
+					user: 'dd',
+					name: 'd2'
+				},
+				beforeSend: function(xhr) {
+					xhr.setRequestHeader('SOAPAction', 'http://tempuri.org/MySoapHeader');
+				},
+				success: function(d) {
+					$('#user-list').empty();
+					console.log("success:" + JSON.stringify(d));
+					if(this.dataType == 'text') {
+						$('#user-list').append('<li>' + d + '</li>');
+						return;
+					}
+					if(d.status != 1) {
+						$('#user-list').append('<li>' + d.message + '</li>');
+						return;
+					}
+					for(var i = 0; i < d.data.length; i++) {
+						$('#user-list').append($('<li>' + JSON.stringify(d.data[i]) + '<li>'))
+					}
+				},
+				error: function(d) {
+					console.log("error:" + JSON.stringify(d));
+				}
+			});
+		}
+	</script>
+
+</html>
