@@ -6,15 +6,18 @@ Created on 2018-8-28
 API
 
 '''
+# coding=utf-8
+
 import logging,hashlib,base64,time,json,os,sys
 
 from models import User,Blog,Comment,next_id
 
-from api_server_tool import get,post
+from api_server import get,post
 
 from config import configs
 
 from aiohttp import web
+import asyncio
 
 
 #设置cookie
@@ -75,11 +78,32 @@ class JsonData(dict):
         self[key] = value
 
 
-#test-----------------------------
+
+def get_page_index(*,page='1'):
+    p = 1
+    try:
+        p = int(page)
+    except ValueError as v:
+        raise
+    if p<1:
+        p=1 
+    return p
+
+#api
+@get('/')
+async def get_index(*,request):
+    return {
+        '__template__':'index.html',
+        'title':'首页'
+    }
+
+
+#api-test-----------------------------
 @get('/doc/{t}')
+@get('/doc1/{t}')
 async def getText(t,request):
     return {
-        '__template__':'/test_api.html'
+        '__template__':'test_api.html'
     }
 
 @get('/api/user')
@@ -98,21 +122,22 @@ async def getUser(*,user,name,request):
         data = JsonData(**lg)
     return  data
 
-from flask import render_template
 
 @get('/html/test')
 async def get_html_test(*,request):
     return  {
-        '__tempalte__':"test_api.html",
+        '__template__':"index.html",
         'title':'标题',
         'datetime':time.time()
     }
 
 @get('/api/usersall')
-async def getAll(*,user,name,request):
+async def getAll(request,*arg,**kw):
+    user = kw.get('user',None)
+    name = kw.get('name',None)
     #filterColumn=['name','email','image']
     filterColumn=[]
-    rs = await User.findAll(where=None, args=None,filterColumn=filterColumn)
+    rs = await User.findAll(filterColumn=filterColumn)
     data = dict(
         status=1,
         data=rs,

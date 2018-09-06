@@ -1,0 +1,44 @@
+{% extends '__base__.html'%}
+
+<!--document-title-->
+{% block title %}日志{% endblock %}
+
+<!--body-content-->
+{% block content %}
+
+<div id="vm-content" :title="message">
+	{{message}}标题${title}
+</div>
+
+{% endblock %}
+
+<!--script-->
+{% block script %}
+
+<script>
+	var vm;
+	window.onload = function() {
+		if(Vue) {
+			vm = new Vue({
+				el: '#vm-content',
+				data: {
+					message: 'Hello Vue!'
+				}
+			})
+		}
+	}
+</script>
+
+{% endblock %}
+
+<!--style-->
+{% block style%}
+
+<style>
+	img {
+		width: 200px;
+		height: auto;
+	}
+</style>
+
+{% endblock %}

@@ -74,6 +74,20 @@ def has_request_arg(fn):
             raise ValueError('request parameter must be the last named parameter in function: %s%s'%(fn.__name__,str(sig)))
     return found
 
+#自定义错误处理页面
+def error_url(app,request,status):
+    kw = {
+        'status':status,
+    }
+    logging.error('Can not access as:%s->%s'%(request.method,request.path))
+    resp = web.Response(body=app['__templating__'].get_template('error.html').render(**kw).encode('utf-8'))
+    resp.content_type = 'text/html;charset=utf-8'
+    return resp
+
+#自定义api错误
+def error_api(request,dt):
+    logging.error('Can not access as:%s->%s  error-message:%s'%(request.method,request.path,dt.get('message',None)))
+    return dt
 
 class RequestHander(object):
     
@@ -91,18 +105,33 @@ class RequestHander(object):
         if self._has_request_arg or self._has_var_kw_arg or self._has_named_kw_args:
             if request.method == 'POST':
                 if not request.content_type:
-                    return web.HTTPBadRequest('Missing content-type')
+                    dt={
+                        'status':-1,
+                        'data':None,
+                        'message':'Missing content-type'
+                    }
+                    return error_api(request, dt)
                 ct = request.content_type.lower()
                 if ct.startswith('application/json'):
                     params = await request.json()
                     if not isinstance(params, dict):
-                        return web.HTTPBadRequest('json body must be object')
+                        dt={
+                            'status':-1,
+                            'data':None,
+                            'message':'json body must be object'
+                        }
+                        return error_api(request, dt)
                     kw = params
                 elif ct.startswith('application/x-www-form-urlencoded') or ct.startswith('multipart/form-data'):
                     params = await request.post()
                     kw = dict(**params)
                 else:
-                    return web.HTTPBadRequest('Unsupported Content-Type:%s',request.content_type)
+                    dt={
+                        'status':-1,
+                        'data':None,
+                        'message':'Unsupported Content-Type:%s'%request.content_type
+                    }
+                    return error_api(request, dt)
             
             if request.method == 'GET':
                 qs = request.query_string
@@ -131,7 +160,12 @@ class RequestHander(object):
         if self._has_request_arg:
             for name in self._get_required_kw_args:
                 if not name in kw:
-                    return web.HTTPBadRequest('Missing argument:%s'%name)
+                    dt={
+                        'status':-1,
+                        'data':None,
+                        'message':'Missing someone argument'
+                    }
+                    return error_api(request, dt)
         logging.info('call arguments%s'%str(kw))
         
         try:

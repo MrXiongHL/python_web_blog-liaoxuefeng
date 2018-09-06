@@ -30,12 +30,11 @@
 		window.onload = function() {
 			$.ajax({
 				type: "get",
-				url: 'http://127.0.0.1:9100/api/usersall?users=sdfsdf',
+				url: 'http://127.0.0.1:9000/api/user',
 				dataType: "json",
 				jsonp: 'jsoncallback',
 				data: {
-					user: 'dd',
-					name: 'd2'
+					
 				},
 				beforeSend: function(xhr) {
 					xhr.setRequestHeader('SOAPAction', 'http://tempuri.org/MySoapHeader');

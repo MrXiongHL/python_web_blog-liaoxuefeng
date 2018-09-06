@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<link rel="shortcut icon" href="../static/ico/favicon.ico"/>
+		<title>{% block title%}{% endblock%}</title>
+		{% block style %}{% endblock %}
+		<script type="text/javascript" src="../static/script/vue.min.js" ></script>
+		<script type="text/javascript" src="../static/script/jquery-1.9.1.min.js" ></script>
+		{% block script %}{% endblock %}
+		
+	</head>
+	<body>
+		{% block content%}{% endblock%}
+	</body>
+</html>

@@ -56,7 +56,7 @@ import aiohttp_cors
 from jinja2 import Environment,FileSystemLoader
 
 import orm
-from api_server_tool import add_static,add_routes
+from api_server import add_static,add_routes,error_url
 
 from config import configs
 
@@ -69,8 +69,8 @@ def init_jinja2(app,**kw):
         autoescape=kw.get('autoescape',True),
         block_start_string=kw.get('block_start_string','{%'),
         block_end_string=kw.get('block_end_string','%}'),
-        variable_start_string=kw.get('variable_start_string','{{'),
-        variable_end_string=kw.get('variable_end_string','}}'),
+        variable_start_string=kw.get('variable_start_string','${'),
+        variable_end_string=kw.get('variable_end_string','}'),
         auto_reload = kw.get('auto_reload',True)
     )
     path = kw.get('path',None)
@@ -84,16 +84,6 @@ def init_jinja2(app,**kw):
             env.filters[name] = f
     app['__templating__'] = env
     
-#自定义错误处理页面
-def error_url(app,request,status):
-    kw = {
-        'status':status,
-    }
-    logging.error('Can not access as:%s->%s'%(request.method,request.path))
-    resp = web.Response(body=app['__templating__'].get_template('error.html').render(**kw).encode('utf-8'))
-    resp.content_type = 'text/html;charset=utf-8'
-    return resp
-
 async def logger_factory(app,handler):
     async def logger(request):
         logging.info('Request:%s %s'%(request.method,request.path))
@@ -127,12 +117,14 @@ async def auth_factory(app,handler):
     async def auth(request):
         logging.info('check user %s=>%s'%(request.method,request.path))
         request.__user__ = None
-        cookie_strs = request.cookies.get(COOKE_NAME)
-        if cookie_strs:
-            user = await cookie_user(cookie_strs)
-            if user:
-                logging.info('set current user:%s'%(user.email))
-                request.__user__ = user
+        #只检测html，不检测api
+        if request.path.startswith('/html'):
+            cookie_strs = request.cookies.get(COOKE_NAME)
+            if cookie_strs:
+                user = await cookie_user(cookie_strs)
+                if user:
+                    logging.info('set current user:%s'%(user.email))
+                    request.__user__ = user
         return (await handler(request))
         
     return auth
@@ -151,13 +143,17 @@ async def response_factory(app,handler):
             resp.content_type = 'application/octet-stream'
             return resp
         if isinstance(r, str):
+            if r.startswith('data:image/png;base64'):
+                resp = web.Response(body=r[22:])
+                resp.content_type = 'image/gif'
+                return resp
             if r.startswith('redirect:'):
                 return web.HTTPFound(r[9:])
             resp = web.Response(body=r.encode('utf-8'))
             resp.content_type = 'text/html;charset=utf-8'
             return resp
         if isinstance(r, dict):
-            template = r.get('__tempalte__')
+            template = r.get('__template__')
             if template is None:
                 resp = web.Response(body=json.dumps(r, ensure_ascii=False,default=lambda o :o.__dict__).encode('utf-8'))
                 resp.content_type = 'application/json;charset=utf-8'
@@ -194,8 +190,21 @@ def stringx_filter(x):
     return u'%s,%s'%(x,'死了！')
 
 
+def set_cors(app):
+    #设置跨域
+    cors = aiohttp_cors.setup(app,defaults={
+        '*':aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
+    #resoure = cors.add(app.router.add_resource('/api'))
+    for route in list(app.router.routes()):
+        cors.add(route)
+
 async def init_web_py36(loop,cors=None):
-    await orm.create_pool(loop=loop,**configs['db'])
+    await orm.create_pool_old(loop=loop,**configs['db'])
     
     app = web.Application(loop=loop,middlewares=[
         logger_factory,auth_factory,response_factory
@@ -212,39 +221,30 @@ async def init_web_py36(loop,cors=None):
     return srv
 
 
-async def init_web_py37(loop,cors=None):
-    await orm.create_pool(loop=loop,**configs['db'])
-    
+def init_web_py37(cors=None):
     app = web.Application(middlewares=[
         logger_factory,auth_factory,response_factory
     ])
+    #数据库
+    app['db'] = configs['db']
+    app.on_startup.append(orm.create_pool)
+    #模板
     init_jinja2(app,filters=dict(datetime=datetime_filter,stringx=stringx_filter))
+    #路由
     add_routes(app, 'handlers')
     add_static(app)
-    
     #设置跨域
     if cors:
         set_cors(app)
+    #启动
+    # srv = await loop.create_server(app.make_handler(),'127.0.0.1','9100')
+    web.run_app(app,host='127.0.0.1',port=9000)
     
-    srv = await loop.create_server(app.make_handler(),'127.0.0.1','9100')
-    return srv
-
-def set_cors(app):
-    #设置跨域
-    cors = aiohttp_cors.setup(app,defaults={
-        '*':aiohttp_cors.ResourceOptions(
-            allow_credentials=True,
-            expose_headers="*",
-            allow_headers="*",
-        )
-    })
-    #resoure = cors.add(app.router.add_resource('/api'))
-    for route in list(app.router.routes()):
-        cors.add(route)
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(init_web_py37(loop,cors=True))
-    loop.run_forever()
+    init_web_py37(cors=True)
+    #loop = asyncio.get_event_loop()
+    #loop.run_until_complete(init_web_py37(cors=True))
+    #loop.run_forever()
     
     
