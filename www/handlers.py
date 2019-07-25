@@ -103,7 +103,8 @@ async def get_index(*,request):
 @get('/doc1/{t}')
 async def getText(t,request):
     return {
-        '__template__':'test_api.html'
+        '__template__':'test_api.html',
+		'title':'测试 user 接口'
     }
 
 @get('/api/user')
@@ -130,7 +131,7 @@ async def get_html_test(*,request):
         'title':'标题',
         'datetime':time.time()
     }
-
+		
 @get('/api/usersall')
 async def getAll(request,*arg,**kw):
     user = kw.get('user',None)

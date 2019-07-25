@@ -1,64 +1,92 @@
 <!DOCTYPE html>
-<html>
+{% extends '__base__.html'%}
 
-	<head>
-		<meta charset="utf-8">
-		<title>人员清单</title>
-		<style>
-			* {
-				padding: 0;
-				margin: 0;
-			}
-			
-			#user-list {
-				list-style: none;
-			}
-		</style>
-	</head>
+<!--document-title-->
+{% block title %}${title}{% endblock %}
 
-	<body>
-		{{1535912996.7972815|datetime}}
-		{{('卧槽' | stringx)}}
-		{{title}}
-		<ul id="user-list">
-		</ul>
-		
-	</body>
-	<script src="../static/script/jquery-1.9.1.min.js"></script>
-	<script>
-		
-		window.onload = function() {
-			$.ajax({
-				type: "get",
-				url: 'http://127.0.0.1:9000/api/user',
-				dataType: "json",
-				jsonp: 'jsoncallback',
-				data: {
-					
-				},
-				beforeSend: function(xhr) {
-					xhr.setRequestHeader('SOAPAction', 'http://tempuri.org/MySoapHeader');
-				},
-				success: function(d) {
-					$('#user-list').empty();
-					console.log("success:" + JSON.stringify(d));
-					if(this.dataType == 'text') {
-						$('#user-list').append('<li>' + d + '</li>');
-						return;
+<!--body-content-->
+{% block content %}
+
+<div id="vm-content">
+	${title}
+	<br />
+	<div v-for="item in list" :key="item.id" style="margin-bottom: 10px;background: #f7f7f7;">
+		<img :src="item.image" style="height: 100px;" />
+		<div>用户名：{{item.name}}</div>
+		<div>email：{{item.email}}</div>
+		<div>注册日期:{{item.create_dt|datetime}}</div>
+	</div>
+</div>
+
+{% endblock %}
+
+<!--script-->
+{% block script %}
+
+<script>
+	var vm = new Vue({
+		el: '#vm-content',
+		data: {
+			list: []
+		},
+		created() {
+			this.getUserInfo();
+		},
+		filters: {
+			datetime: function(dela) {
+				if (dela<60)
+				    return '1分钟前'
+				if (dela < 3600)
+				    return (dela/60)+'分钟前'
+				if (dela < 86400)
+				    return (dela/3600)+'小时前'
+				if (dela < 604800)
+				    return (dela/86400)+'天前'
+				var dt = new Date(dela);
+				return dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日';
+			}
+		},
+		methods: {
+			getUserInfo: function() {
+				var self = this;
+				$.ajax({
+					type: "get",
+					url: '/api/usersall',
+					dataType: "json",
+					jsonp: 'jsoncallback',
+					data: {
+						user: 'test',
+						name: "test"
+					},
+					beforeSend: function(xhr) {
+						xhr.setRequestHeader('SOAPAction', 'http://tempuri.org/MySoapHeader');
+					},
+					success: function(d) {
+						if (d && d.status == 1 && d.data) {
+							self.list = d.data;
+						} else {
+							alert("暂无用户数据")
+						}
+					},
+					error: function(d) {
+						console.log("error:" + JSON.stringify(d));
 					}
-					if(d.status != 1) {
-						$('#user-list').append('<li>' + d.message + '</li>');
-						return;
-					}
-					for(var i = 0; i < d.data.length; i++) {
-						$('#user-list').append($('<li>' + JSON.stringify(d.data[i]) + '<li>'))
-					}
-				},
-				error: function(d) {
-					console.log("error:" + JSON.stringify(d));
-				}
-			});
+				});
+			}
 		}
-	</script>
+	});
+</script>
 
-</html>
+{% endblock %}
+
+<!--style-->
+{% block style%}
+
+<style>
+	img {
+		width: 200px;
+		height: auto;
+	}
+</style>
+
+{% endblock %}

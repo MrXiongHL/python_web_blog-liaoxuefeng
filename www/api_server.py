@@ -175,10 +175,14 @@ class RequestHander(object):
             return dict(error=e.error,data=e.data,message=e.message)
 
 
-def add_static(app):
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'static')
-    app.router.add_static('/static/',path)
-    logging.info('add static path %s => %s'%('/static/',path))
+def add_static(app,route,*fileNames):
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),*fileNames)
+    app.router.add_static(route,path)
+    logging.info('add static path %s => %s'%(route,path))
+	
+# def add_mixMall_static(app):
+#     path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'static','mix-mall')
+#     app.router.add_static('/mix-mall/',path)
 
 def add_route(app,fn):
     method = getattr(fn, '__method__',None)

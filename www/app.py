@@ -15,12 +15,12 @@ log_fmt = '%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s : %(messa
 
 #----------------日志
 #--1.--写入文件，控制台打印
-#lg = logging.basicConfig(filename=log_file,filemode="a",level=logging.INFO,format=log_fmt)
-#lsh = logging.StreamHandler()#创建控制台输出流
-#stream_log_fmt_str = logging.Formatter(log_fmt)#创建控制台日志输出格式
-#lsh.setFormatter(stream_log_fmt_str)#设置控制台显示格式
-#log = logging.getLogger(lg)#获取当前logging控制器
-#log.addHandler(lsh)#添加控制台输出流到当前logging
+# lg = logging.basicConfig(filename=log_file,filemode="a",level=logging.INFO,format=log_fmt)
+# lsh = logging.StreamHandler()#创建控制台输出流
+# stream_log_fmt_str = logging.Formatter(log_fmt)#创建控制台日志输出格式
+# lsh.setFormatter(stream_log_fmt_str)#设置控制台显示格式
+# log = logging.getLogger(lg)#获取当前logging控制器
+# log.addHandler(lsh)#添加控制台输出流到当前logging
 
 #--2.--写入文件，控制台打印
 #lg = logging.basicConfig(level=logging.INFO,format=log_fmt)
@@ -40,7 +40,7 @@ log = logging.getLogger(lg)
 log.addHandler(th_hander)
 
 th_hander_err = handlers.TimedRotatingFileHandler(filename=log_file_error,when=when,backupCount=backCount,encoding='utf-8')
-#stream_log_fmt_str = logging.Formatter(log_fmt)#创建控制台日志输出格式
+# stream_log_fmt_str = logging.Formatter(log_fmt)#创建控制台日志输出格式
 th_hander_err.setLevel(logging.ERROR)
 th_hander_err.setFormatter(stream_log_fmt_str)#设置显示样式
 log.addHandler(th_hander_err)
@@ -183,8 +183,8 @@ def datetime_filter(t):
         return u'%s小时前'%(dela//3600)
     if dela < 604800:
         return u'%s天前'%(dela//86400)
-    dt = datetime.fromtimestamp(t)
-    return u'%s年%s月%s日 '%(dt.year,dt.moth,dt.day)
+    dt = datetime.fromtimestamp(t/1000,None)
+    return dt.strftime('%Y{y}%m{m}%d{d}').format(y='年',m='月',d='日')
 
 def stringx_filter(x):
     return u'%s,%s'%(x,'死了！')
@@ -211,13 +211,14 @@ async def init_web_py36(loop,cors=None):
     ])
     init_jinja2(app,filters=dict(datetime=datetime_filter,stringx=stringx_filter))
     add_routes(app, 'handlers')
-    add_static(app)
+    add_static(app,'/static/','static')
+    add_static(app,'/mix-mall/','static','mix-mall')
     
     #设置跨域
     if cors:
         set_cors(app)
         
-    srv = await loop.create_server(app.make_handler(),'127.0.0.1','9100')
+    srv = await loop.create_server(app.make_handler(),configs['server'].host,configs['server'].port)
     return srv
 
 
@@ -232,13 +233,14 @@ def init_web_py37(cors=None):
     init_jinja2(app,filters=dict(datetime=datetime_filter,stringx=stringx_filter))
     #路由
     add_routes(app, 'handlers')
-    add_static(app)
+    add_static(app,'/static/','static')
+    add_static(app,'/mix-mall/','static','mix-mall')
     #设置跨域
     if cors:
         set_cors(app)
     #启动
     # srv = await loop.create_server(app.make_handler(),'127.0.0.1','9100')
-    web.run_app(app,host='127.0.0.1',port=9000)
+    web.run_app(app,host=configs['server'].host,port=configs['server'].port)
     
 
 if __name__ == '__main__':
